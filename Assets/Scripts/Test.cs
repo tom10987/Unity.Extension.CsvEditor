@@ -5,9 +5,15 @@ public class Test : MonoBehaviour
 {
   void Start()
   {
-    // CSV ファイルの読み込みを実行
-    var csv = CsvAsset.Load("test03", CsvAsset.Delimiter.comma);
+    /*
+    var csv = CsvImporter.Import();
+    Debug.Log(csv.text);
+     */
 
+    // CSV ファイルの読み込みを実行
+    //var csv = CsvAsset.Load("test02", CsvAsset.Delimiter.comma);
+
+    /*
     // CSV ファイルへのアクセス（読み取り専用）
     Debug.Log("first = " + csv[0]);
 
@@ -21,5 +27,6 @@ public class Test : MonoBehaviour
 
     // foreach による操作
     foreach (var text in csv.GetEnumerator()) { Debug.Log(text); }
+     */
   }
 }

@@ -37,133 +37,98 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.RegularExpressions;
 
-public class CsvAsset
+namespace Csv
 {
-  readonly string[] _table = null;
-
-  readonly int _row = 0;
-  readonly int _column = 0;
-
-  /// <summary>
-  /// <see cref="Load(string)"/> または <see cref="Convert(TextAsset)"/>
-  /// を使用してください。
-  /// </summary>
-  protected CsvAsset(string[][] table)
+  public sealed class CsvAsset
   {
-    _row = table.Length;
-    _column = table[0].Length;
+    readonly string[] _table = null;
 
-    _table = table.SelectMany(value => value).ToArray();
-  }
+    private CsvAsset(string[] table) { _table = table; }
 
 
-  /// <summary> 内部のテーブルに安全にアクセスする </summary>
-  public string this[int index]
-  {
-    get
+    /// <summary> 内部のテーブルに安全にアクセスする </summary>
+    public string this[int index]
     {
-      int clamp = Mathf.Clamp(index, 0, _table.Length - 1);
-      return _table[clamp];
-    }
-  }
-
-  /// <summary> 内部のテーブルに安全にアクセスする </summary>
-  public string this[int row, int column]
-  {
-    get
-    {
-      int clampR = Mathf.Clamp(row, 0, _row - 1) * _column;
-      int clampC = Mathf.Clamp(column, 0, _column - 1);
-      return _table[Mathf.Min(clampR + clampC, _table.Length - 1)];
-    }
-  }
-
-  /// <summary> 読み取ったデータを連結して、１つの文字列として返す
-  /// <para> 注意：区切り文字は含まない </para></summary>
-  public string text
-  {
-    get { return _table.Aggregate((now, next) => string.Concat(now, next)); }
-  }
-
-  /// <summary> foreach などの繰り返し処理で動作するイテレーターを返す
-  /// <para> 注意：区切り文字は含まない </para></summary>
-  public IEnumerable<string> GetEnumerator()
-  {
-    foreach (var text in _table) { yield return text; }
-  }
-
-
-  /// <summary> 全体の要素数 </summary>
-  public int length { get { return _table.Length; } }
-
-  /// <summary> 行の要素数 </summary>
-  public int row { get { return _row; } }
-
-  /// <summary> 列の要素数 </summary>
-  public int column { get { return _column; } }
-
-
-  /// <summary> 区切り文字の種類 </summary>
-  public class Delimiter
-  {
-    static readonly Delimiter[] _delimiters = null;
-
-    public static Delimiter comma { get { return _delimiters[0]; } }
-    public static Delimiter space { get { return _delimiters[1]; } }
-    public static Delimiter tab { get { return _delimiters[2]; } }
-
-    static Delimiter()
-    {
-      _delimiters = new Delimiter[]
-      {
-        new Delimiter(","),
-        new Delimiter(" "),
-        new Delimiter("\t"),
-      };
+      get { return _table[index < 0 ? 0 : index % _table.Length]; }
     }
 
-    // struct にすると、デフォルトコンストラクタが使えてしまうため、class にしている
-    private Delimiter(string value) { _value = value; }
-
-    // Regex の各種メソッドが char 型に対応していないため、string 型で管理する
-    string _value = string.Empty;
-
-    public static explicit operator char(Delimiter d) { return d._value[0]; }
-    public static implicit operator string(Delimiter d) { return d._value; }
-
-    public override string ToString() { return _value; }
-  }
-
-  // テキストから除外する文字の種類
-  static readonly Regex _linefeed = new Regex(@"[\r\n]");
+    /// <summary>
+    /// foreach などの繰り返し処理で動作するイテレーターを返す
+    /// </summary>
+    public IEnumerable<string> GetEnumerator()
+    {
+      foreach (var text in _table) { yield return text; }
+    }
 
 
-  /// <summary> 指定したファイルを CSV アセットとして読み込む <para>
-  /// 区切り文字は コンマ "," として扱う </para></summary>
-  public static CsvAsset Load(string filePath)
-  {
-    return Load(filePath, Delimiter.comma);
-  }
+    /// <summary> 全体の要素数 </summary>
+    public int length { get { return _table.Length; } }
 
-  /// <summary> 指定したファイルを CSV アセットとして読み込む </summary>
-  public static CsvAsset Load(string filePath, Delimiter delimiter)
-  {
-    var textAsset = Resources.Load<TextAsset>(filePath);
-    return Convert(textAsset, delimiter);
-  }
 
-  /// <summary> 指定したリソースを CSV アセットに変換する <para>
-  /// 区切り文字は コンマ "," として扱う </para></summary>
-  public static CsvAsset Convert(TextAsset resource)
-  {
-    return Convert(resource, Delimiter.comma);
-  }
+    /// <summary> 区切り文字で接続した文字列を返す <para>
+    /// 区切り文字は コンマ を使用する </para></summary>
+    public string Serialize(int columnLength)
+    {
+      return Serialize(columnLength, Delimiter.comma);
+    }
 
-  /// <summary> 指定したリソースを CSV アセットに変換する <para>
-  public static CsvAsset Convert(TextAsset resource, Delimiter delimiter)
-  {
-    if (resource == null) { return null; }
+    /// <summary> 区切り文字で接続した文字列を返す </summary>
+    public string Serialize(int columnLength, Delimiter option)
+    {
+      // 配列の範囲外アクセスを防止するため、長さを補正する
+      columnLength = Mathf.Clamp(columnLength, 1, _table.Length - 1);
 
+      // 行末になる要素
+      var results = _table.Select((cell, id) => Parse(cell, id, columnLength));
+      return string.Join(option, results.ToArray());
+    }
+
+    static string Parse(string cell, int id, int length)
+    {
+      return "";
+    }
+
+    /*
+
+    /// <summary> 指定したファイルを CSV アセットとして読み込む <para>
+    /// 区切り文字は コンマ "," として扱う </para></summary>
+    public static CsvAsset Load(string filePath)
+    {
+      return Load(filePath, Delimiter.comma);
+    }
+
+    /// <summary> 指定したファイルを CSV アセットとして読み込む </summary>
+    public static CsvAsset Load(string filePath, Delimiter delimiter)
+    {
+      var textAsset = Resources.Load<TextAsset>(filePath);
+      return Convert(textAsset, delimiter);
+    }
+
+    /// <summary> 指定したリソースを CSV アセットに変換する <para>
+    /// 区切り文字は コンマ "," として扱う </para></summary>
+    public static CsvAsset Convert(TextAsset resource)
+    {
+      return Convert(resource, Delimiter.comma);
+    }
+
+    /// <summary> 指定したリソースを CSV アセットに変換する <para>
+    public static CsvAsset Convert(TextAsset resource, Delimiter delimiter)
+    {
+      if (resource == null) { return null; }
+
+      // セルごとに切り分ける
+      var source = Regex.Split(resource.text, delimiter.SplitPattern());
+
+      // セルのデータを整形する
+      var select = source.Select(data => RegexExclude(data, Delimiter.exclude));
+
+      // 余計な空データを取り除いたデータ列を取得
+      var result = select.Where(data => !string.IsNullOrEmpty(data));
+
+      foreach (var value in result) { Debug.Log(value); }
+
+       */
+    /*
     // 指定した区切り文字と改行コード以外の余計な文字を取り除く
     var stream = RegexExclude(resource.text, @"[^\w\r\n" + delimiter + @"]");
 
@@ -174,6 +139,7 @@ public class CsvAsset
     var table = lines.Select(line => Regex.Split(line, delimiter));
 
     return new CsvAsset(table.ToArray());
+    return null;
   }
 
 
@@ -188,5 +154,7 @@ public class CsvAsset
   {
     var lines = regex.Split(input).Select(line => regex.Replace(line, replacement));
     return lines.Where(value => !string.IsNullOrEmpty(value)).ToArray();
+  }
+   */
   }
 }
